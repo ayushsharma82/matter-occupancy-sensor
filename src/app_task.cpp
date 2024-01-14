@@ -14,6 +14,7 @@
 #include "board_util.h"
 #include <app/server/OnboardingCodesUtil.h>
 #include <app/server/Server.h>
+#include <app-common/zap-generated/attributes/Accessors.h>
 #include <credentials/DeviceAttestationCredsProvider.h>
 #include <credentials/examples/DeviceAttestationCredsExample.h>
 #include <lib/support/CHIPMem.h>
