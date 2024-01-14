@@ -32,6 +32,9 @@
 #include <dk_buttons_and_leds.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/gpio.h>
 
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
 
@@ -78,6 +81,9 @@ namespace StatusLed
 
 } /* namespace StatusLed */
 } /* namespace LedConsts */
+
+#define OCCUPANCY_TRIGGER_NODE DT_NODELABEL(trigger0)
+static const struct gpio_dt_spec trigger = GPIO_DT_SPEC_GET(OCCUPANCY_TRIGGER_NODE, gpios);
 
 #ifdef CONFIG_CHIP_WIFI
 app::Clusters::NetworkCommissioning::Instance
@@ -140,6 +146,37 @@ CHIP_ERROR AppTask::Init()
 		LOG_ERR("dk_buttons_init() failed");
 		return chip::System::MapErrorZephyr(ret);
 	}
+
+	/* === Occupancy specific code BEGIN === */
+
+	/* Initialize occupancy trigger */
+	int gpio_err = gpio_pin_configure_dt(&trigger, GPIO_INPUT);
+	if (gpio_err) {
+		LOG_ERR("Configuring trigger GPIO failed");
+		return chip::System::MapErrorZephyr(gpio_err);
+	}
+
+	/* Configure pin interrupt for occupancy trigger */
+	gpio_err = gpio_pin_interrupt_configure_dt(&trigger, GPIO_INT_EDGE_BOTH);
+	if (gpio_err) {
+		LOG_ERR("Configuring trigger interrupt failed");
+		return chip::System::MapErrorZephyr(gpio_err);
+	}
+
+	/* Setup occupancy trigger ISR */
+	static struct gpio_callback trigger_cb_data;
+	gpio_init_callback(&trigger_cb_data, OccupancyTriggerISR, BIT(trigger.pin));
+	gpio_err = gpio_add_callback(trigger.port, &trigger_cb_data);
+	if (gpio_err) {
+		LOG_ERR("Adding trigger callback failed");
+		return chip::System::MapErrorZephyr(gpio_err);
+	}
+
+	// Set initial occupancy state
+	// chip::app::Clusters::OccupancySensing::Attributes::Occupancy::Set(1, 0);
+	// chip::app::Clusters::OccupancySensing::Attributes::OccupancySensorType::Set(1, 0);
+
+	/* === Occupancy specific code END === */
 
 	/* Initialize function timer */
 	k_timer_init(&sFunctionTimer, &AppTask::FunctionTimerTimeoutCallback, nullptr);
@@ -294,6 +331,45 @@ void AppTask::UpdateStatusLED()
 		sStatusLED.Blink(LedConsts::StatusLed::Provisioned::kOn_ms, LedConsts::StatusLed::Provisioned::kOff_ms);
 	}
 }
+
+
+/* === Occupancy specific code BEGIN === */
+
+void AppTask::OccupancyTriggerISR(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+	// Get current state of trigger
+	bool occ = gpio_pin_get(dev, DT_GPIO_PIN(OCCUPANCY_TRIGGER_NODE, gpios));
+
+	// If state has changed, post event
+	if (occ != Instance().occupied) {
+		Instance().occupied = occ;
+		AppEvent event;
+		event.Type = AppEventType::OccupancyChanged;
+		event.OccupancyEvent.occupied = occ;
+		event.Handler = OccupancyEventHandler;
+		PostEvent(event);
+	}
+}
+
+void AppTask::OccupancyEventHandler(const AppEvent &event) {
+	if (event.Type == AppEventType::OccupancyChanged) {
+		LOG_INF("Occupancy changed to %s", event.OccupancyEvent.occupied ? "occupied" : "unoccupied");
+
+		// OPTIONAL: If network is provisioned and enabled, it is safe to update the status LED
+		if (sIsNetworkProvisioned && sIsNetworkEnabled) {
+			// Toggle status LED 
+			sStatusLED.Set(event.OccupancyEvent.occupied);
+		}
+
+		// Create bitmap8 and send first bit to indicate occupancy using bitwise OR operator
+		uint8_t occ = 0;
+		occ |= (uint8_t) (event.OccupancyEvent.occupied ? 1 : 0);
+		// Update CHIP occupancy cluster
+		chip::app::Clusters::OccupancySensing::Attributes::Occupancy::Set(1, occ);
+	}
+}
+
+/* === Occupancy specific code END === */
+
 
 void AppTask::ChipEventHandler(const ChipDeviceEvent *event, intptr_t /* arg */)
 {

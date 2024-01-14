@@ -1,0 +1,1 @@
+zap ./src/template.zap --zcl /opt/nordic/ncs/v2.5.1/modules/lib/matter/src/app/zap-templates/zcl/zcl.json --gen /opt/nordic/ncs/v2.5.1/modules/lib/matter/src/app/zap-templates/app-templates.json

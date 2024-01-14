@@ -9,6 +9,11 @@
 #include "app_event.h"
 #include "led_widget.h"
 
+
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/gpio.h>
 #include <platform/CHIPDeviceLayer.h>
 
 #if CONFIG_CHIP_FACTORY_DATA
@@ -48,6 +53,15 @@ private:
 	static void LEDStateUpdateHandler(LEDWidget &ledWidget);
 	static void FunctionTimerTimeoutCallback(k_timer *timer);
 	static void UpdateStatusLED();
+
+	/* === Occupancy specific code BEGIN === */
+
+	static void OccupancyEventHandler(const AppEvent &event);
+	static void OccupancyTriggerISR(const struct device *dev, struct gpio_callback *cb, uint32_t pins);
+	
+	/* === Occupancy specific code END === */
+
+	bool occupied = false;
 
 	FunctionEvent mFunction = FunctionEvent::NoneSelected;
 	bool mFunctionTimerActive = false;

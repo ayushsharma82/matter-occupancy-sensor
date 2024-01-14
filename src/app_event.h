@@ -12,7 +12,17 @@
 
 class LEDWidget;
 
-enum class AppEventType : uint8_t { None = 0, Button, ButtonPushed, ButtonReleased, Timer, UpdateLedState };
+enum class AppEventType : uint8_t {
+	None = 0,
+	Button,
+	ButtonPushed,
+	ButtonReleased,
+	Timer,
+	UpdateLedState,
+	/* === Occupancy specific code BEGIN === */
+	OccupancyChanged
+	/* === Occupancy specific code END === */
+};
 
 enum class FunctionEvent : uint8_t { NoneSelected = 0, FactoryReset };
 
@@ -28,6 +38,11 @@ struct AppEvent {
 		struct {
 			LEDWidget *LedWidget;
 		} UpdateLedStateEvent;
+		/* === Occupancy specific code BEGIN === */
+		struct {
+			bool occupied;
+		} OccupancyEvent;
+		/* === Occupancy specific code END === */
 	};
 
 	AppEventType Type{ AppEventType::None };

@@ -1,0 +1,14 @@
+
+/ {
+    occupancy {
+        compatible = "gpio-keys";
+        trigger0: trigger_0 {
+			gpios = <&gpio0 10 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+			label = "Occupancy Trigger Pin";
+		};
+    };
+
+    aliases {
+        trigger = &trigger0;
+    };
+};
