@@ -1,6 +1,21 @@
 .. _matter_template_sample:
 
-Matter: Template
+Matter: Occupancy Sensor Implementation
+################
+
+This repo contains "Matter" occupancy sensor implementation based on nRF Connect v2.5.1 SDK. It can be used as an reference to build a matter-compatible occupancy/motion sensor using a PIR or mmWave radars. It works with every mainstream smart speaker with matter support and you can directly comission your sensor into your google home / apple homekit ecosystem.
+
+
+Supported Boards:
+*****************
+
+1. nRF5840 DK
+2. nRF52840 DK
+3. nRF7002 DK ( tested )
+
+
+
+Nordic Template Documentation:
 ################
 
 .. contents::
